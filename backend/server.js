@@ -18,10 +18,10 @@ app.get("/api/:table", async (req, res) => {
 
     // Map lowercase → actual MySQL table names
     const tableMap = {
-      cpu: "CPU",
-      gpu: "GPU",
-      laptop: "Laptop",
-      mobile: "Mobile",
+      cpu: "CPU_clean",
+      gpu: "GPU_clean",
+      laptop: "Laptop_clean",
+      mobile: "Mobile_clean",
       company: "Company",
       user: "User",
       comment: "Comment",
@@ -68,5 +68,37 @@ app.post("/api/comment", async (req, res) => {
   }
 });
 
+app.put("/api/comment/:commentId", async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const { Content, Stars } = req.body;
+
+    const [result] = await db.query(
+      "UPDATE Comment SET Content = ?, Stars = ? WHERE CommentID = ?",
+      [Content, Stars, commentId]
+    );
+
+    res.json({ success: true, updated: result.affectedRows });
+  } catch (err) {
+    console.error("❌ Update error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/comment/:commentId", async (req, res) => {
+  try {
+    const { commentId } = req.params;
+
+    const [result] = await db.query(
+      "DELETE FROM Comment WHERE CommentID = ?",
+      [commentId]
+    );
+
+    res.json({ success: true, deleted: result.affectedRows });
+  } catch (err) {
+    console.error("❌ Delete error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 // ✅ Start backend server
 app.listen(5000, () => console.log("🚀 Server running on port 5000"));
