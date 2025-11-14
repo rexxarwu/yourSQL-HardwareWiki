@@ -41,6 +41,48 @@ app.get("/api/:table", async (req, res) => {
   }
 });
 
+// 🔍 Search in any table (CPU, GPU, Mobile, Laptop)
+app.get("/api/search/:table", async (req, res) => {
+  try {
+    const { table } = req.params;
+    const { q } = req.query;
+
+    if (!q) return res.status(400).json({ error: "Missing search query" });
+
+    // Whitelist for security
+    const tableMap = {
+      cpu: "CPU",
+      gpu: "GPU",
+      mobile: "Mobile",
+      laptop: "Laptop",
+    };
+
+    const realTable = tableMap[table.toLowerCase()];
+    if (!realTable) return res.status(400).json({ error: "Invalid table" });
+
+    // Search all text columns using LIKE
+    const [cols] = await db.query(`SHOW COLUMNS FROM \`${realTable}\``);
+
+    // Build LIKE clauses dynamically
+    const likeClauses = cols
+      .filter((c) => c.Type.includes("varchar") || c.Type.includes("text"))
+      .map((c) => `\`${c.Field}\` LIKE ?`)
+      .join(" OR ");
+
+    const likeParams = Array(cols.length).fill(`%${q}%`);
+
+    const [rows] = await db.query(
+      `SELECT * FROM \`${realTable}\` WHERE ${likeClauses}`,
+      likeParams
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ Search error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ✅ Get comments for a specific product
 app.get("/api/comment/:productId", async (req, res) => {
   try {
